@@ -199,32 +199,6 @@ root_vec = np.zeros(N_Nodes)
 root_vec[root] = 1
 plt.scatter(NodePos[root, 0], NodePos[root, 1], s = 200, c = 'b')
 
-# # visualize the graph with edges connected to the root
-# # plt.figure()
-# for nn in range(N_edges):
-#     if Delta[nn, root]==1:
-#         i1 = root
-#         i2 = np.where(Delta[nn, :]==-1)
-#         i2 = i2[0]
-#         point1 = [NodePos[i1, 0], NodePos[i1, 1]]
-#         point2 = [NodePos[i2, 0], NodePos[i2, 1]]
-#         x_values = [point1[0], point2[0]]
-#         y_values = [point1[1], point2[1]]
-#         plt.plot(x_values, y_values, 'r', linestyle = '--', linewidth = 2*w[nn, nn])
-#     if Delta[nn, root]==-1:
-#         i1 = root
-#         i2 = np.where(Delta[nn, :]==1)
-#         i2 = i2[0]
-#         point1 = [NodePos[i1, 0], NodePos[i1, 1]]
-#         point2 = [NodePos[i2, 0], NodePos[i2, 1]]
-#         x_values = [point1[0], point2[0]]
-#         y_values = [point1[1], point2[1]]
-#         plt.plot(x_values, y_values, 'r', linestyle = '--', linewidth = 2*w[nn, nn])
-# plt.title("Graph structure with edges near root")
-#
-# plt.show()
-
-
 
 NewBranches = []
 PrevBranches = [root]
@@ -455,3 +429,190 @@ print(N_Nodes)
 
 
 plt.show()
+
+
+
+
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------
+# Now iterate to find an optimal FVS by looking at many different random spanning trees
+# --------------------------------------------------------------------------------------------------
+
+Nr = 7
+Nc = 7
+N_Nodes = Nr*Nc
+p = .25
+
+# G = nx.complete_graph(N_Nodes)
+
+check = 0
+while check == 0:
+    G = nx.erdos_renyi_graph(N_Nodes, p)
+    if np.size(list(nx.connected_components(G))) == 1:
+        check = 1
+    print("Generating a connected ER graph...")
+
+N_edges = G.number_of_edges()
+
+N_dim = 2
+
+NodePos = np.zeros((N_Nodes, N_dim)) # physical degrees of freedom - the positions of the Nodes in the network
+
+
+
+NumTrees = 100 # number of spanning trees to check
+FVS_Val = np.zeros(NumTrees)
+
+
+for Tree_Index in range(NumTrees):
+
+    from numpy.random import seed
+    from numpy.random import rand
+    from numpy.random import randn
+
+    for ii in range(Nr):
+        for jj in range(Nc):
+            NodePos[Nr*ii + jj, 0] = ii + 0.1*randn(1)
+            NodePos[Nr*ii + jj, 1] = jj + 0.1*randn(1)
+
+    wVec = np.ones(N_edges)
+    w = np.diag(wVec)
+
+    # Incidence matrix in the form rows = edges, columns = vertices to match the above format
+    def IM_From_G(G):
+        Delta_FromNX = nx.incidence_matrix(G, oriented = True)
+        Delta = np.transpose(Delta_FromNX.toarray())
+        return Delta, Delta_FromNX
+
+    Delta, Delta_FromNX = IM_From_G(G)
+
+    # print(np.shape(Delta))
+    # print(Delta)
+
+    DeltaT = np.zeros((N_edges, N_Nodes))
+    DeltaGmT = Delta.copy()
+
+
+
+    print(Tree_Index/NumTrees)
+
+    root = np.random.randint(0, N_Nodes)
+    root_vec = np.zeros(N_Nodes)
+    root_vec[root] = 1
+    # plt.scatter(NodePos[root, 0], NodePos[root, 1], s = 200, c = 'b')
+
+
+    NewBranches = []
+    PrevBranches = [root]
+
+    VT = 1 # count the number of vertices on the tree
+
+    while VT<N_Nodes:
+        if VT==1:
+            Branches = [root]
+        else:
+            NewBranches = []
+
+        # print(Branches)
+        for branch in Branches:
+
+            branch = np.int64(branch)
+
+            for nn in range(N_edges):
+
+                if DeltaGmT[nn, branch]==1:
+
+                    i2 = np.where(DeltaGmT[nn, :]==-1)
+                    i2 = i2[0]
+
+
+                    if i2 not in Branches:
+                        if i2 not in PrevBranches:
+                            if i2 not in NewBranches:
+                                i1 = branch
+                                point1 = [NodePos[i1, 0], NodePos[i1, 1]]
+                                point2 = [NodePos[i2, 0], NodePos[i2, 1]]
+                                x_values = [point1[0], point2[0]]
+                                y_values = [point1[1], point2[1]]
+                                # plt.plot(x_values, y_values, 'b', linestyle = '-', linewidth = 4*w[nn, nn])
+                                DeltaGmT[nn, branch] = 0
+                                DeltaGmT[nn, i2] = 0
+                                DeltaT[nn, i1] = 1
+                                DeltaT[nn, i2] = -1
+                                NewBranches = np.append(NewBranches, i2)
+                                VT+=1
+
+                if DeltaGmT[nn, branch]==-1:
+
+                    i2 = np.where(DeltaGmT[nn, :]==1)
+                    i2 = i2[0]
+
+                    if i2 not in Branches:
+                        if i2 not in PrevBranches:
+                            if i2 not in NewBranches:
+                                i1 = branch
+                                point1 = [NodePos[i1, 0], NodePos[i1, 1]]
+                                point2 = [NodePos[i2, 0], NodePos[i2, 1]]
+                                x_values = [point1[0], point2[0]]
+                                y_values = [point1[1], point2[1]]
+                                # plt.plot(x_values, y_values, 'b', linestyle = '-', linewidth = 4*w[nn, nn])
+                                DeltaGmT[nn, branch] = 0
+                                DeltaGmT[nn, i2] = 0
+                                DeltaT[nn, i1] = -1
+                                DeltaT[nn, i2] = 1
+                                NewBranches = np.append(NewBranches, i2)
+                                VT+=1
+
+        # print(PrevBranches)
+        PrevBranches = np.append(PrevBranches, Branches)
+
+        Branches = NewBranches
+
+    points = np.append(PrevBranches, Branches)
+    #
+    #for ii in points:
+    #    ii = np.int64(ii)
+    #    for nn in range(N_edges):
+    #        DeltaGmT[nn, ii]=0
+
+
+    # ----------------------------------------------------------------------------------------------
+    # Now take out the FVS from the above algorithm, using the randomly selected spanning tree
+    # ----------------------------------------------------------------------------------------------
+
+    ConnGmT = np.matmul(np.transpose(DeltaGmT), DeltaGmT)
+
+    GmT_Degrees = ConnGmT.diagonal()
+
+    # print(GmT_Degrees)
+
+    while np.sum(np.abs((DeltaGmT)))>0:
+
+        iMax = np.argmax(GmT_Degrees)
+
+        for ii in range(np.shape(Delta)[0]):
+            if Delta[ii, iMax] != 0:
+                Delta[ii, :] = np.zeros(np.size(Delta[ii, :]))
+                DeltaGmT[ii, :] = np.zeros(np.size(DeltaGmT[ii, :]))
+
+        ConnGmT = np.matmul(np.transpose(DeltaGmT), DeltaGmT)
+        GmT_Degrees = ConnGmT.diagonal()
+
+
+    FVS_Val[Tree_Index] = N_Nodes - np.int64(np.sum(np.abs(Delta))/2) - 1
+
+
+# Show that the FVS size depends on the initial spanning tree
+plt.figure()
+plt.plot(FVS_Val)
+plt.xlabel("Iteration")
+plt.ylabel("FVS Size")
+plt.show()
+
+
+
+# TODO: save the minimal FVS for this graph; compare the learning rate for graphs of different |FVS|, but similar size, connectivity
