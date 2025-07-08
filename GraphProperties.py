@@ -120,10 +120,12 @@ import networkx as nx
 # Define a graph using NetworkX and export the incidence matrix
 # ---------------------------------------------------------------------------------------------------------------------------
 
-Nr = 5
-Nc = 5
+Nr = 4
+Nc = 4
 N_Nodes = Nr*Nc
-p = .1
+p = .2
+
+# G = nx.complete_graph(N_Nodes)
 
 check = 0
 while check == 0:
@@ -147,8 +149,8 @@ from numpy.random import randn
 
 for ii in range(Nr):
     for jj in range(Nc):
-        NodePos[Nr*ii + jj, 0] = ii + 0.05*randn()
-        NodePos[Nr*ii + jj, 1] = jj + 0.05*randn()
+        NodePos[Nr*ii + jj, 0] = ii + 0.1*randn()
+        NodePos[Nr*ii + jj, 1] = jj + 0.1*randn()
 
 wVec = np.ones(N_edges)
 w = np.diag(wVec)
@@ -161,10 +163,11 @@ def IM_From_G(G):
 
 Delta, Delta_FromNX = IM_From_G(G)
 
-print(np.shape(Delta))
+# print(np.shape(Delta))
+# print(Delta)
 
-DeltaT = np.zeros(np.shape(Delta))
-DeltaGmT = np.zeros(np.shape(Delta))
+DeltaT = np.zeros((N_edges, N_Nodes))
+DeltaGmT = Delta.copy()
 
 
 
@@ -375,7 +378,7 @@ while np.sum(np.abs((DeltaGmT)))>0:
     GmT_Degrees = ConnGmT.diagonal()
 
 
-FVS = N_Nodes - np.sum(np.abs(Delta))/2
+FVS = N_Nodes - np.int64(np.sum(np.abs(Delta))/2) - 1
 # visualize G after removing the FVS
 
 plt.figure()
@@ -390,6 +393,65 @@ for nn in range(N_edges):
     y_values = [point1[1], point2[1]]
     plt.plot(x_values, y_values, 'ko', linestyle = '-', linewidth = w[nn, nn])
 plt.title("G after removing the FVS of size {}".format(FVS))
+
+
+# plt.show()
+
+
+
+# Now convert the incidence matrix Delta back to a graph defined in NX
+
+
+# Create a graph
+G_new = nx.Graph()
+Tree = nx.Graph()
+
+# for ii in range(N_Nodes):
+#     G_new.add_node(ii)
+#     Tree.add_node(ii)
+
+Delta = np.transpose(Delta) # to fit the format of NX
+DeltaT = np.transpose(DeltaT)
+# print(np.shape(DeltaT))
+# print(np.shape(Delta))
+# print(Delta)
+
+# Loop through columns (edges)
+num_edges = Delta.shape[1]
+# print(num_edges)
+# print(N_edges)
+for edge_idx in range(num_edges):
+    col = Delta[:, edge_idx]
+    source = np.where(col == -1)[0]
+    target = np.where(col == 1)[0]
+    # print(source)
+    # print(target)
+    # print(edge_idx)
+
+    if len(source) == 1 and len(target) == 1:
+        G_new.add_edge(source[0], target[0])
+
+
+for edge_idx in range(num_edges):
+    col = DeltaT[:, edge_idx]
+    source = np.where(col == -1)[0]
+    target = np.where(col == 1)[0]
+    # print(source)
+    # print(target)
+    # print(edge_idx)
+
+    if len(source) == 1 and len(target) == 1:
+        Tree.add_edge(source[0], target[0])
+
+plt.figure()
+nx.draw(G_new, with_labels=True)
+
+plt.figure()
+nx.draw(Tree, with_labels=True)
+
+
+print(Tree.number_of_nodes())
+print(N_Nodes)
 
 
 plt.show()
