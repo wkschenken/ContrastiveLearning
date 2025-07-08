@@ -16,97 +16,157 @@ import matplotlib.mlab as mlab
 from scipy import stats
 import matplotlib.pyplot as plt
 import pandas as pd
+import networkx as nx
 
-# define number of Nodes - beginning with a Nr x Nc grid of Nodes in 2D
-N_dim = 2
+# ---------------------------------------------------------------------------------------------------------------------------
+# Defining a graph by hand --- later, using NetworkX to define graphs more simply and exporting the incidence matrix
+# ---------------------------------------------------------------------------------------------------------------------------
+#
+# # define number of Nodes - beginning with a Nr x Nc grid of Nodes in 2D
+# N_dim = 2
+#
+# Nr = 5
+# Nc = Nr
+# N_Nodes = Nr**2
+#
+# NodePos = np.zeros((N_Nodes, N_dim)) # physical degrees of freedom - the positions of the Nodes in the network
+#
+# # Initialize the positions of the Nodes
+# # add a small random displacement so that it's easier to distinguish edges that are connected to vs crossing a given node
+# from numpy.random import seed
+# from numpy.random import rand
+# from numpy.random import randn
+# # seed random number generator for repeatable results
+# # seed(1)
+# for ii in range(Nr):
+#     for jj in range(Nc):
+#         NodePos[Nr*ii + jj, 0] = ii + 0.05*randn()
+#         NodePos[Nr*ii + jj, 1] = jj + 0.05*randn()
+#
+#
+# # define the incidence matrix Delta
+# # = +1 or -1 for incoming/outgoing edges (but the graph here is undirected, so labels are arbitrary)
+#
+# #N_edges = (Nr-1)*Nc + (Nc-1)*Nr + (Nc-1)*(Nr-1) # number of edges for a square graph + one-way diagonals
+# #N_edges = (Nr-1)*Nc + (Nc-1)*Nr + 2*(Nc-1)*(Nr-1) # number of edges for a square graph + both diagonals
+# # N_edges = (Nr-1)*Nc + (Nc-1)*Nr# number of edges for a square graph
+# N_edges = (Nr-1)*Nc + (Nc-1)*Nr + 2*(Nc-1)*(Nr-1) + 3 # number of edges for a square graph + both diagonals + a few random connections
+#
+# Delta = np.zeros((N_edges, N_Nodes))
+# DeltaT = np.zeros((N_edges, N_Nodes))
+# DeltaGmT = np.zeros((N_edges, N_Nodes))
+#
+# kk=0 # index to count edges
+#
+# # Horizontal
+# for ii in range(Nr-1):
+#     for jj in range(Nc):
+#         Delta[kk, Nr*ii + jj] = 1
+#         Delta[kk, Nr*(ii+1) + jj] = -1
+#         DeltaGmT[kk, Nr*ii + jj] = 1
+#         DeltaGmT[kk, Nr*(ii+1) + jj] = -1
+#         kk+=1
+#
+# # vertical
+# for jj in range(Nc-1):
+#     for ii in range(Nr):
+#         Delta[kk, Nr*ii + jj] = 1
+#         Delta[kk, Nr*ii + jj + 1] = -1
+#         DeltaGmT[kk, Nr*ii + jj] = 1
+#         DeltaGmT[kk, Nr*ii + jj + 1] = -1
+#         kk+=1
+#
+# # diagonal, up and to the right
+# for ii in range(Nr-1):
+#     for jj in range(Nc-1):
+#         Delta[kk, Nr*ii + jj] = 1
+#         Delta[kk, Nr*(ii+1) + jj + 1] = -1
+#         DeltaGmT[kk, Nr*ii + jj] = 1
+#         DeltaGmT[kk, Nr*(ii+1) + jj + 1] = -1
+#         kk+=1
+#
+# # diagonal, up and to the left
+# for ii in range(Nr-1):
+#     for jj in range(1, Nc):
+#         Delta[kk, Nr*ii + jj] = 1
+#         Delta[kk, Nr*(ii+1) + jj - 1] = -1
+#         DeltaGmT[kk, Nr*ii + jj] = 1
+#         DeltaGmT[kk, Nr*(ii+1) + jj - 1] = -1
+#         kk+=1
+#
+# Delta[kk, 0] = 1
+# Delta[kk, 2*Nr-1] = -1
+# DeltaGmT[kk, 0] = 1
+# DeltaGmT[kk, 2*Nr-1] = -1
+# kk+=1
+# Delta[kk, 1] = 1
+# Delta[kk, 2*Nr-1] = -1
+# DeltaGmT[kk, 1] = 1
+# DeltaGmT[kk, 2*Nr-1] = -1
+# kk+=1
+# Delta[kk, 2] = 1
+# Delta[kk, 2*Nr-1] = -1
+# DeltaGmT[kk, 2] = 1
+# DeltaGmT[kk, 2*Nr-1] = -1
+#
+# # The weights of the edges will be unimportant for the initial tests
+# # initialize all edges to have an arbitrary weight = 1
+# wVec = np.ones(N_edges)
+# w = np.diag(wVec)
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# Define a graph using NetworkX and export the incidence matrix
+# ---------------------------------------------------------------------------------------------------------------------------
 
 Nr = 5
-Nc = Nr
-N_Nodes = Nr**2
+Nc = 5
+N_Nodes = Nr*Nc
+p = .1
+
+check = 0
+while check == 0:
+    G = nx.erdos_renyi_graph(N_Nodes, p)
+    if np.size(list(nx.connected_components(G))) == 1:
+        check = 1
+    print("Generating a connected ER graph...")
+
+N_edges = G.number_of_edges()
+
+N_dim = 2
 
 NodePos = np.zeros((N_Nodes, N_dim)) # physical degrees of freedom - the positions of the Nodes in the network
 
-# Initialize the positions of the Nodes
-# add a small random displacement so that it's easier to distinguish edges that are connected to vs crossing a given node
+
+
+
 from numpy.random import seed
 from numpy.random import rand
 from numpy.random import randn
-# seed random number generator for repeatable results
-# seed(1)
+
 for ii in range(Nr):
     for jj in range(Nc):
         NodePos[Nr*ii + jj, 0] = ii + 0.05*randn()
         NodePos[Nr*ii + jj, 1] = jj + 0.05*randn()
 
-
-# define the incidence matrix Delta
-# = +1 or -1 for incoming/outgoing edges (but the graph here is undirected, so labels are arbitrary)
-
-#N_edges = (Nr-1)*Nc + (Nc-1)*Nr + (Nc-1)*(Nr-1) # number of edges for a square graph + one-way diagonals
-#N_edges = (Nr-1)*Nc + (Nc-1)*Nr + 2*(Nc-1)*(Nr-1) # number of edges for a square graph + both diagonals
-# N_edges = (Nr-1)*Nc + (Nc-1)*Nr# number of edges for a square graph
-N_edges = (Nr-1)*Nc + (Nc-1)*Nr + 2*(Nc-1)*(Nr-1) + 3 # number of edges for a square graph + both diagonals + a few random connections
-
-Delta = np.zeros((N_edges, N_Nodes))
-DeltaGmT = np.zeros((N_edges, N_Nodes))
-
-kk=0 # index to count edges
-
-# Horizontal
-for ii in range(Nr-1):
-    for jj in range(Nc):
-        Delta[kk, Nr*ii + jj] = 1
-        Delta[kk, Nr*(ii+1) + jj] = -1
-        DeltaGmT[kk, Nr*ii + jj] = 1
-        DeltaGmT[kk, Nr*(ii+1) + jj] = -1
-        kk+=1
-
-# vertical
-for jj in range(Nc-1):
-    for ii in range(Nr):
-        Delta[kk, Nr*ii + jj] = 1
-        Delta[kk, Nr*ii + jj + 1] = -1
-        DeltaGmT[kk, Nr*ii + jj] = 1
-        DeltaGmT[kk, Nr*ii + jj + 1] = -1
-        kk+=1
-
-# diagonal, up and to the right
-for ii in range(Nr-1):
-    for jj in range(Nc-1):
-        Delta[kk, Nr*ii + jj] = 1
-        Delta[kk, Nr*(ii+1) + jj + 1] = -1
-        DeltaGmT[kk, Nr*ii + jj] = 1
-        DeltaGmT[kk, Nr*(ii+1) + jj + 1] = -1
-        kk+=1
-
-# diagonal, up and to the left
-for ii in range(Nr-1):
-    for jj in range(1, Nc):
-        Delta[kk, Nr*ii + jj] = 1
-        Delta[kk, Nr*(ii+1) + jj - 1] = -1
-        DeltaGmT[kk, Nr*ii + jj] = 1
-        DeltaGmT[kk, Nr*(ii+1) + jj - 1] = -1
-        kk+=1
-
-Delta[kk, 0] = 1
-Delta[kk, 2*Nr-1] = -1
-DeltaGmT[kk, 0] = 1
-DeltaGmT[kk, 2*Nr-1] = -1
-kk+=1
-Delta[kk, 1] = 1
-Delta[kk, 2*Nr-1] = -1
-DeltaGmT[kk, 1] = 1
-DeltaGmT[kk, 2*Nr-1] = -1
-kk+=1
-Delta[kk, 2] = 1
-Delta[kk, 2*Nr-1] = -1
-DeltaGmT[kk, 2] = 1
-DeltaGmT[kk, 2*Nr-1] = -1
-
-# The weights of the edges will be unimportant for the initial tests
-# initialize all edges to have an arbitrary weight = 1
 wVec = np.ones(N_edges)
 w = np.diag(wVec)
+
+# Incidence matrix in the form rows = edges, columns = vertices to match the above format
+def IM_From_G(G):
+    Delta_FromNX = nx.incidence_matrix(G, oriented = True)
+    Delta = np.transpose(Delta_FromNX.toarray())
+    return Delta, Delta_FromNX
+
+Delta, Delta_FromNX = IM_From_G(G)
+
+print(np.shape(Delta))
+
+DeltaT = np.zeros(np.shape(Delta))
+DeltaGmT = np.zeros(np.shape(Delta))
+
+
 
 # visualize the graph with edges
 plt.figure()
@@ -198,6 +258,8 @@ while VT<N_Nodes:
                             plt.plot(x_values, y_values, 'b', linestyle = '-', linewidth = 4*w[nn, nn])
                             DeltaGmT[nn, branch] = 0
                             DeltaGmT[nn, i2] = 0
+                            DeltaT[nn, i1] = 1
+                            DeltaT[nn, i2] = -1
                             NewBranches = np.append(NewBranches, i2)
                             VT+=1
 
@@ -217,23 +279,25 @@ while VT<N_Nodes:
                             plt.plot(x_values, y_values, 'b', linestyle = '-', linewidth = 4*w[nn, nn])
                             DeltaGmT[nn, branch] = 0
                             DeltaGmT[nn, i2] = 0
+                            DeltaT[nn, i1] = -1
+                            DeltaT[nn, i2] = 1
                             NewBranches = np.append(NewBranches, i2)
                             VT+=1
 
-    # print(NewBranches)
+    # print(PrevBranches)
     PrevBranches = np.append(PrevBranches, Branches)
 
     Branches = NewBranches
 
 points = np.append(PrevBranches, Branches)
-print(points)
+# print(points)
 
 
 plt.title("One instance of a tree (blue) for a given graph G (black)")
 
 # plt.show()
 
-DeltaT = Delta-DeltaGmT
+# DeltaT = np.abs(Delta)-np.abs(DeltaGmT)
 
 plt.figure()
 plt.matshow(np.transpose(DeltaT))
@@ -269,6 +333,63 @@ for nn in range(N_edges):
 plt.title("Acyclic graph structure")
 # plt.show()
 
+# visualize G minus the spanning tree
+plt.figure()
+for nn in range(N_edges):
+    i1 = np.where(DeltaGmT[nn, :]==1)
+    i2 = np.where(DeltaGmT[nn, :]==-1)
+    i1 = i1[0]
+    i2 = i2[0]
+    point1 = [NodePos[i1, 0], NodePos[i1, 1]]
+    point2 = [NodePos[i2, 0], NodePos[i2, 1]]
+    x_values = [point1[0], point2[0]]
+    y_values = [point1[1], point2[1]]
+    plt.plot(x_values, y_values, 'ko', linestyle = '-', linewidth = w[nn, nn])
+plt.title("G-T")
+# plt.show()
+
+
+
+
+# ----------------------------------------------------------------------------------------------
+# Now take out the FVS from the above algorithm, using the randomly selected spanning tree
+# ----------------------------------------------------------------------------------------------
+
+ConnGmT = np.matmul(np.transpose(DeltaGmT), DeltaGmT)
+
+GmT_Degrees = ConnGmT.diagonal()
+
+# print(GmT_Degrees)
+
+
+while np.sum(np.abs((DeltaGmT)))>0:
+
+    iMax = np.argmax(GmT_Degrees)
+
+    for ii in range(np.shape(Delta)[0]):
+        if Delta[ii, iMax] != 0:
+            Delta[ii, :] = np.zeros(np.size(Delta[ii, :]))
+            DeltaGmT[ii, :] = np.zeros(np.size(DeltaGmT[ii, :]))
+
+    ConnGmT = np.matmul(np.transpose(DeltaGmT), DeltaGmT)
+    GmT_Degrees = ConnGmT.diagonal()
+
+
+FVS = N_Nodes - np.sum(np.abs(Delta))/2
+# visualize G after removing the FVS
+
+plt.figure()
+for nn in range(N_edges):
+    i1 = np.where(Delta[nn, :]==1)
+    i2 = np.where(Delta[nn, :]==-1)
+    i1 = i1[0]
+    i2 = i2[0]
+    point1 = [NodePos[i1, 0], NodePos[i1, 1]]
+    point2 = [NodePos[i2, 0], NodePos[i2, 1]]
+    x_values = [point1[0], point2[0]]
+    y_values = [point1[1], point2[1]]
+    plt.plot(x_values, y_values, 'ko', linestyle = '-', linewidth = w[nn, nn])
+plt.title("G after removing the FVS of size {}".format(FVS))
 
 
 plt.show()
