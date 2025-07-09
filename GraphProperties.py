@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import scipy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.pyplot import imshow
@@ -127,6 +128,10 @@ p = .2
 
 # G = nx.complete_graph(N_Nodes)
 
+# pWS = 0.3
+# kWS = 4
+# G = nx.watts_strogatz_graph(N_Nodes, kWS, pWS)
+
 check = 0
 while check == 0:
     G = nx.erdos_renyi_graph(N_Nodes, p)
@@ -162,6 +167,10 @@ def IM_From_G(G):
     return Delta, Delta_FromNX
 
 Delta, Delta_FromNX = IM_From_G(G)
+
+
+NS_Delta = scipy.linalg.null_space(np.transpose(Delta))
+print("Cycles in G from the null space of the incidence matrix: {}".format(np.shape(NS_Delta)[1]))
 
 # print(np.shape(Delta))
 # print(Delta)
@@ -270,6 +279,22 @@ points = np.append(PrevBranches, Branches)
 # print(points)
 
 
+# check the cycle space of the tree
+# First define a new incidence matrix that deletes columns with all zeros
+DeltaT_Reduced = DeltaT.copy()
+DeleteTheseIndices = 0
+while DeleteTheseIndices<np.shape(DeltaT_Reduced)[0]:
+    if np.sum(np.abs(DeltaT_Reduced[DeleteTheseIndices, :]))<1e-10:
+        DeltaT_Reduced = np.delete(DeltaT_Reduced, DeleteTheseIndices, axis = 0)
+    else:
+        DeleteTheseIndices+=1
+    print(ii)
+
+NS_DeltaT = scipy.linalg.null_space(np.transpose(DeltaT_Reduced))
+print(NS_DeltaT)
+print("Cycles in T from the null space of the incidence matrix: {}".format(np.shape(NS_DeltaT)[1]))
+
+
 plt.title("One instance of a tree (blue) for a given graph G (black)")
 
 # plt.show()
@@ -324,6 +349,9 @@ for nn in range(N_edges):
     plt.plot(x_values, y_values, 'ko', linestyle = '-', linewidth = w[nn, nn])
 plt.title("G-T")
 # plt.show()
+
+
+# Check that the graph is acyclic by looking at the null space of the incidence matrix, which should be empty
 
 
 
@@ -442,19 +470,19 @@ plt.show()
 # Now iterate to find an optimal FVS by looking at many different random spanning trees
 # --------------------------------------------------------------------------------------------------
 
-Nr = 7
-Nc = 7
-N_Nodes = Nr*Nc
-p = .25
-
-# G = nx.complete_graph(N_Nodes)
-
-check = 0
-while check == 0:
-    G = nx.erdos_renyi_graph(N_Nodes, p)
-    if np.size(list(nx.connected_components(G))) == 1:
-        check = 1
-    print("Generating a connected ER graph...")
+# Nr = 7
+# Nc = 7
+# N_Nodes = Nr*Nc
+# p = .25
+#
+# # G = nx.complete_graph(N_Nodes)
+#
+# check = 0
+# while check == 0:
+#     G = nx.erdos_renyi_graph(N_Nodes, p)
+#     if np.size(list(nx.connected_components(G))) == 1:
+#         check = 1
+#     print("Generating a connected ER graph...")
 
 N_edges = G.number_of_edges()
 
@@ -612,7 +640,3 @@ plt.plot(FVS_Val)
 plt.xlabel("Iteration")
 plt.ylabel("FVS Size")
 plt.show()
-
-
-
-# TODO: save the minimal FVS for this graph; compare the learning rate for graphs of different |FVS|, but similar size, connectivity
