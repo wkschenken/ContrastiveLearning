@@ -288,7 +288,6 @@ while DeleteTheseIndices<np.shape(DeltaT_Reduced)[0]:
         DeltaT_Reduced = np.delete(DeltaT_Reduced, DeleteTheseIndices, axis = 0)
     else:
         DeleteTheseIndices+=1
-    print(ii)
 
 NS_DeltaT = scipy.linalg.null_space(np.transpose(DeltaT_Reduced))
 print(NS_DeltaT)
