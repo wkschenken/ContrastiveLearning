@@ -42,7 +42,7 @@ p = .15
 
 # G = nx.complete_graph(N_Nodes)
 
-N_Graphs = 50 # number of graphs to check
+N_Graphs = 100 # number of graphs to check
 
 FVS_Vals_g = [] # Note the size of the FVS for each graph
 N_Edges_g = [] # Note the edges for each graph
@@ -100,18 +100,18 @@ for iteration in range(N_Graphs):
 
 
     # visualize the graph with edges
-    plt.figure()
-    for nn in range(N_edges):
-        i1 = np.where(Delta[nn, :]==1)
-        i2 = np.where(Delta[nn, :]==-1)
-        i1 = i1[0]
-        i2 = i2[0]
-        point1 = [NodePos[i1, 0], NodePos[i1, 1]]
-        point2 = [NodePos[i2, 0], NodePos[i2, 1]]
-        x_values = [point1[0], point2[0]]
-        y_values = [point1[1], point2[1]]
-        # plt.plot(x_values, y_values, 'ko', linestyle = '-', linewidth = w[nn, nn])
-    plt.title("Graph structure")
+    # plt.figure()
+    # for nn in range(N_edges):
+    #     i1 = np.where(Delta[nn, :]==1)
+    #     i2 = np.where(Delta[nn, :]==-1)
+    #     i1 = i1[0]
+    #     i2 = i2[0]
+    #     point1 = [NodePos[i1, 0], NodePos[i1, 1]]
+    #     point2 = [NodePos[i2, 0], NodePos[i2, 1]]
+    #     x_values = [point1[0], point2[0]]
+    #     y_values = [point1[1], point2[1]]
+    #     # plt.plot(x_values, y_values, 'ko', linestyle = '-', linewidth = w[nn, nn])
+    # plt.title("Graph structure")
     # plt.show()
 
 
@@ -693,10 +693,23 @@ for iteration in range(N_Graphs):
         iterations_2ndHalf = np.linspace(np.int64(0.7*np.size(err_RMS)), np.size(err_RMS), np.int64(np.size(err_RMS) - np.int64(0.7*np.size(err_RMS)))+1)
         def ExpDecay(it, T, A):
             return A*np.exp(-(it/T))
-        pars_err_RMS, cov_err_RMS = curve_fit(ExpDecay, iterations_2ndHalf, err_RMS_2ndHalf, p0=[50, 3e-1], bounds=(0, np.inf))
-        T_fit = np.round(pars_err_RMS[0],decimals = 3)
-        A_fit = np.round(pars_err_RMS[1],decimals = 3)
-        err_RMS_fit = A_fit*np.exp(-LearningIterationsArray/T_fit)*minErr
+
+        fit_okay = False
+        try:
+            pars_err_RMS, cov_err_RMS = curve_fit(ExpDecay, iterations_2ndHalf, err_RMS_2ndHalf, p0=[50, 3e-1], bounds=(0, np.inf))
+            pars_err_RMS, cov_err_RMS = curve_fit(ExpDecay, iterations_2ndHalf, err_RMS_2ndHalf, p0=[50, 3e-1], bounds=(0, np.inf))
+            T_fit = np.round(pars_err_RMS[0],decimals = 3)
+            A_fit = np.round(pars_err_RMS[1],decimals = 3)
+            err_RMS_fit = A_fit*np.exp(-LearningIterationsArray/T_fit)*minErr
+            fit_okay = True
+        except (RuntimeError, ValueError) as e:
+
+            print(f"Fit failed at iteration {iteration}")
+
+            continue
+
+
+
         # plt.plot(LearningIterationsArray, err_RMS_fit, linestyle='--', linewidth=2, color='blue',label='Decay constant = {}'.format(T_fit))
         # plt.suptitle("Error in output voltage vs iterations number")
         # plt.title("Blue = Inputs, Red = Outputs; FVS = {}, Nodes = {}, Edges = {}".format(FVS_Opt,N_Nodes,N_edges))
@@ -725,15 +738,15 @@ for iteration in range(N_Graphs):
 
         # visualize the graph with edges at its equilibrium voltage before optimization
         # plt.figure()
-        for nn in range(N_edges):
-            i1 = np.where(Delta_Learning[nn, :]==1)
-            i2 = np.where(Delta_Learning[nn, :]==-1)
-            i1 = i1[0]
-            i2 = i2[0]
-            point1 = [NodePos[i1, 0], NodePos[i1, 1]]
-            point2 = [NodePos[i2, 0], NodePos[i2, 1]]
-            x_values = [point1[0], point2[0]]
-            y_values = [point1[1], point2[1]]
+        # for nn in range(N_edges):
+        #     i1 = np.where(Delta_Learning[nn, :]==1)
+        #     i2 = np.where(Delta_Learning[nn, :]==-1)
+        #     i1 = i1[0]
+        #     i2 = i2[0]
+        #     point1 = [NodePos[i1, 0], NodePos[i1, 1]]
+        #     point2 = [NodePos[i2, 0], NodePos[i2, 1]]
+        #     x_values = [point1[0], point2[0]]
+        #     y_values = [point1[1], point2[1]]
             # plt.plot(x_values, y_values, 'k', linestyle = '-', linewidth = wInit[nn, nn])
         # for ii in range(N_Nodes):
         #     # plt.scatter(NodePos[ii, 0], NodePos[ii, 1], 100*NodeValsFreeInit[ii], c = 'k', alpha = 0.5)
@@ -750,15 +763,15 @@ for iteration in range(N_Graphs):
 
         # visualize the final graph with edges at its equilibrium voltage after optimization
         # plt.figure()
-        for nn in range(N_edges):
-            i1 = np.where(Delta_Learning[nn, :]==1)
-            i2 = np.where(Delta_Learning[nn, :]==-1)
-            i1 = i1[0]
-            i2 = i2[0]
-            point1 = [NodePos[i1, 0], NodePos[i1, 1]]
-            point2 = [NodePos[i2, 0], NodePos[i2, 1]]
-            x_values = [point1[0], point2[0]]
-            y_values = [point1[1], point2[1]]
+        # for nn in range(N_edges):
+        #     i1 = np.where(Delta_Learning[nn, :]==1)
+        #     i2 = np.where(Delta_Learning[nn, :]==-1)
+        #     i1 = i1[0]
+        #     i2 = i2[0]
+        #     point1 = [NodePos[i1, 0], NodePos[i1, 1]]
+        #     point2 = [NodePos[i2, 0], NodePos[i2, 1]]
+        #     x_values = [point1[0], point2[0]]
+        #     y_values = [point1[1], point2[1]]
             # plt.plot(x_values, y_values, 'k', linestyle = '-', linewidth = w[nn, nn])
         # for ii in range(N_Nodes):
         #     # plt.scatter(NodePos[ii, 0], NodePos[ii, 1], 100*NodeValsFree[ii], c = 'k', alpha = 0.5)
@@ -771,16 +784,17 @@ for iteration in range(N_Graphs):
         # plt.suptitle("Graph with markersize $\propto$ node voltages after optimization")
         # plt.title("Blue = Inputs, Red = Outputs; FVS = {}, Nodes = {}, Edges = {}".format(FVS_Opt,N_Nodes,N_edges))
 
-        print(NodeValsFreeInit)
-        print(NodeValsFree)
+        # print(NodeValsFreeInit)
+        # print(NodeValsFree)
 
-        print(np.sqrt(np.dot(wVec, wVec)))
+        # print(np.sqrt(np.dot(wVec, wVec)))
 
         # plt.show()
-
-        FVS_Vals_g = np.append(FVS_Vals_g, [FVS_Opt])
-        N_Edges_g = np.append(N_Edges_g, [N_edges])
-        LR_g = np.append(LR_g, [T_fit])
+        if fit_okay:
+            if T_fit<1e5 and T_fit>0:
+                FVS_Vals_g = np.append(FVS_Vals_g, [FVS_Opt])
+                N_Edges_g = np.append(N_Edges_g, [N_edges])
+                LR_g = np.append(LR_g, [T_fit])
 
 
 
@@ -815,7 +829,7 @@ ax = fig.add_subplot(111, projection='3d')
 ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
 
 ax.set_xlabel('|FVS|')
-ax.set_ylabel('Error decay rate')
+ax.set_ylabel('Error decay time')
 ax.set_zlabel('Frequency')
 
 # plt.show()
@@ -852,7 +866,7 @@ ax = fig.add_subplot(111, projection='3d')
 ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
 
 ax.set_xlabel('Number of edges')
-ax.set_ylabel('Error decay rate')
+ax.set_ylabel('Error decay time')
 ax.set_zlabel('Frequency')
 
 plt.show()
