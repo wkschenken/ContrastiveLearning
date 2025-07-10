@@ -47,6 +47,7 @@ N_Graphs = 100 # number of graphs to check
 FVS_Vals_g = [] # Note the size of the FVS for each graph
 N_Edges_g = [] # Note the edges for each graph
 LR_g = [] # Note the error decay rate for each graph
+C_g = [] # Size of the basis for the cycle space
 
 
 for iteration in range(N_Graphs):
@@ -795,6 +796,17 @@ for iteration in range(N_Graphs):
                 FVS_Vals_g = np.append(FVS_Vals_g, [FVS_Opt])
                 N_Edges_g = np.append(N_Edges_g, [N_edges])
                 LR_g = np.append(LR_g, [T_fit])
+                
+                # NS_DeltaT = scipy.linalg.null_space(np.transpose(DeltaT_Reduced))
+                # print(NS_DeltaT)
+                # print("Cycles in T from the null space of the incidence matrix: {}".format(np.shape(NS_DeltaT)[1]))
+                C_g = np.append(C_g, len(nx.cycle_basis(G)))
+                # print("Size of the basis of cycles of G: {}".format(C))
+                # print("Edges: {}".format(N_edges))
+                # print("Nodes: {}".format(N_Nodes))
+                # print("Check Euler's formula: C+N-E = {}".format(C+N_Nodes-N_edges))
+
+
 
 
 
@@ -868,6 +880,78 @@ ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
 ax.set_xlabel('Number of edges')
 ax.set_ylabel('Error decay time')
 ax.set_zlabel('Frequency')
+
+
+# Compare to how the performance depends on the size of the cycle space
+
+plt.figure()
+
+x = np.array(C_g)
+y = np.array(LR_g)
+
+# Define bin edges
+x_edges = np.linspace(np.min(x), np.max(x), 10)
+y_edges = np.linspace(np.min(y), np.max(y), 10)
+
+# Compute 2D histogram
+hist, x_edges, y_edges = np.histogram2d(x, y, bins=(x_edges, y_edges))
+
+# Compute positions of bars
+xpos, ypos = np.meshgrid(x_edges[:-1] + 0.25, y_edges[:-1] + 0.25, indexing="ij")
+xpos = xpos.ravel()
+ypos = ypos.ravel()
+zpos = np.zeros_like(xpos)
+
+# Heights and dimensions
+dx = dy = 0.5 * np.ones_like(zpos)
+dz = hist.ravel()
+
+# Create 3D plot
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
+
+ax.set_xlabel('Size of the cycle space |C|')
+ax.set_ylabel('Error decay time')
+ax.set_zlabel('Frequency')
+
+
+# Look at how the size of the cycle space compares to the size of the FVS
+
+plt.figure()
+
+x = np.array(C_g)
+y = np.array(FVS_Vals_g)
+
+# Define bin edges
+x_edges = np.linspace(np.min(x), np.max(x), 10)
+y_edges = np.linspace(np.min(y), np.max(y), 10)
+
+# Compute 2D histogram
+hist, x_edges, y_edges = np.histogram2d(x, y, bins=(x_edges, y_edges))
+
+# Compute positions of bars
+xpos, ypos = np.meshgrid(x_edges[:-1] + 0.25, y_edges[:-1] + 0.25, indexing="ij")
+xpos = xpos.ravel()
+ypos = ypos.ravel()
+zpos = np.zeros_like(xpos)
+
+# Heights and dimensions
+dx = dy = 0.5 * np.ones_like(zpos)
+dz = hist.ravel()
+
+# Create 3D plot
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
+
+ax.set_ylabel('|FVS|')
+ax.set_xlabel('|C|')
+ax.set_zlabel('Frequency')
+
+
 
 plt.show()
 
