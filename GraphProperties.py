@@ -121,8 +121,8 @@ import networkx as nx
 # Define a graph using NetworkX and export the incidence matrix
 # ---------------------------------------------------------------------------------------------------------------------------
 
-Nr = 4
-Nc = 4
+Nr = 10
+Nc = 10
 N_Nodes = Nr*Nc
 p = .2
 
@@ -288,10 +288,17 @@ while DeleteTheseIndices<np.shape(DeltaT_Reduced)[0]:
         DeltaT_Reduced = np.delete(DeltaT_Reduced, DeleteTheseIndices, axis = 0)
     else:
         DeleteTheseIndices+=1
+    print(ii)
 
 NS_DeltaT = scipy.linalg.null_space(np.transpose(DeltaT_Reduced))
 print(NS_DeltaT)
 print("Cycles in T from the null space of the incidence matrix: {}".format(np.shape(NS_DeltaT)[1]))
+
+C = len(nx.cycle_basis(G))
+print("Size of the basis of cycles of G: {}".format(C))
+print("Edges: {}".format(N_edges))
+print("Nodes: {}".format(N_Nodes))
+print("Check Euler's formula: C+N-E = {}".format(C+N_Nodes-N_edges))
 
 
 plt.title("One instance of a tree (blue) for a given graph G (black)")
@@ -639,3 +646,7 @@ plt.plot(FVS_Val)
 plt.xlabel("Iteration")
 plt.ylabel("FVS Size")
 plt.show()
+
+
+
+# TODO: save the minimal FVS for this graph; compare the learning rate for graphs of different |FVS|, but similar size, connectivity
