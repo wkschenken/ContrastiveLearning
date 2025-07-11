@@ -35,10 +35,10 @@ import networkx as nx
 # Define a graph using NetworkX and export the incidence matrix
 # ---------------------------------------------------------------------------------------------------------------------------
 
-Nr = 6
-Nc = 6
+Nr = 10
+Nc = 10
 N_Nodes = Nr*Nc
-p = .15
+p = .05
 
 # G = nx.complete_graph(N_Nodes)
 
@@ -46,7 +46,8 @@ N_Graphs = 100 # number of graphs to check
 
 FVS_Vals_g = [] # Note the size of the FVS for each graph
 N_Edges_g = [] # Note the edges for each graph
-LR_g = [] # Note the error decay rate for each graph
+LearnTime_g = [] # Note the error decay time for each graph
+ErrorFinal_g = [] # Note the final error (easier and more reliable to extract than the learning rate)
 C_g = [] # Size of the basis for the cycle space
 
 
@@ -795,8 +796,9 @@ for iteration in range(N_Graphs):
             if T_fit<1e5 and T_fit>0:
                 FVS_Vals_g = np.append(FVS_Vals_g, [FVS_Opt])
                 N_Edges_g = np.append(N_Edges_g, [N_edges])
-                LR_g = np.append(LR_g, [T_fit])
-                
+                LearnTime_g = np.append(LearnTime_g, [T_fit])
+                ErrorFinal_g = np.append(ErrorFinal_g, [err_RMS[-2]])
+
                 # NS_DeltaT = scipy.linalg.null_space(np.transpose(DeltaT_Reduced))
                 # print(NS_DeltaT)
                 # print("Cycles in T from the null space of the incidence matrix: {}".format(np.shape(NS_DeltaT)[1]))
@@ -814,12 +816,12 @@ for iteration in range(N_Graphs):
 plt.figure()
 
 x = np.array(FVS_Vals_g)
-y = np.array(LR_g)
+y = np.array(ErrorFinal_g)
 
 
 # Define bin edges
 x_edges = np.linspace(np.min(x), np.max(x), 10)
-y_edges = np.linspace(np.min(y), np.max(y), 10)
+y_edges = np.logspace(np.min(np.log10(y)), np.max(np.log(y)), 10)
 
 # Compute 2D histogram
 hist, x_edges, y_edges = np.histogram2d(x, y, bins=(x_edges, y_edges))
@@ -841,7 +843,7 @@ ax = fig.add_subplot(111, projection='3d')
 ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
 
 ax.set_xlabel('|FVS|')
-ax.set_ylabel('Error decay time')
+ax.set_ylabel('Final RMS Error')
 ax.set_zlabel('Frequency')
 
 # plt.show()
@@ -852,11 +854,11 @@ ax.set_zlabel('Frequency')
 plt.figure()
 
 x = np.array(N_Edges_g)
-y = np.array(LR_g)
+y = np.array(ErrorFinal_g)
 
 # Define bin edges
 x_edges = np.linspace(np.min(x), np.max(x), 10)
-y_edges = np.linspace(np.min(y), np.max(y), 10)
+y_edges = np.logspace(np.min(np.log10(y)), np.max(np.log(y)), 10)
 
 # Compute 2D histogram
 hist, x_edges, y_edges = np.histogram2d(x, y, bins=(x_edges, y_edges))
@@ -878,7 +880,7 @@ ax = fig.add_subplot(111, projection='3d')
 ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
 
 ax.set_xlabel('Number of edges')
-ax.set_ylabel('Error decay time')
+ax.set_ylabel('Final RMS Error')
 ax.set_zlabel('Frequency')
 
 
@@ -887,11 +889,11 @@ ax.set_zlabel('Frequency')
 plt.figure()
 
 x = np.array(C_g)
-y = np.array(LR_g)
+y = np.array(ErrorFinal_g)
 
 # Define bin edges
 x_edges = np.linspace(np.min(x), np.max(x), 10)
-y_edges = np.linspace(np.min(y), np.max(y), 10)
+y_edges = np.linspace(np.min(np.log10(y)), np.max(np.log10(y)), 10)
 
 # Compute 2D histogram
 hist, x_edges, y_edges = np.histogram2d(x, y, bins=(x_edges, y_edges))
@@ -913,7 +915,7 @@ ax = fig.add_subplot(111, projection='3d')
 ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
 
 ax.set_xlabel('Size of the cycle space |C|')
-ax.set_ylabel('Error decay time')
+ax.set_ylabel('Final RMS Error')
 ax.set_zlabel('Frequency')
 
 
