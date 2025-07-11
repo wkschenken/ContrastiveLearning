@@ -42,7 +42,7 @@ p = .05
 
 # G = nx.complete_graph(N_Nodes)
 
-N_Graphs = 100 # number of graphs to check
+N_Graphs = 250 # number of graphs to check
 
 FVS_Vals_g = [] # Note the size of the FVS for each graph
 N_Edges_g = [] # Note the edges for each graph
@@ -816,12 +816,12 @@ for iteration in range(N_Graphs):
 plt.figure()
 
 x = np.array(FVS_Vals_g)
-y = np.array(ErrorFinal_g)
+y = np.array(np.log10(ErrorFinal_g))
 
 
 # Define bin edges
 x_edges = np.linspace(np.min(x), np.max(x), 10)
-y_edges = np.logspace(np.min(np.log10(y)), np.max(np.log(y)), 10)
+y_edges = np.linspace(np.min(y), np.max(y), 10)
 
 # Compute 2D histogram
 hist, x_edges, y_edges = np.histogram2d(x, y, bins=(x_edges, y_edges))
@@ -843,7 +843,7 @@ ax = fig.add_subplot(111, projection='3d')
 ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
 
 ax.set_xlabel('|FVS|')
-ax.set_ylabel('Final RMS Error')
+ax.set_ylabel('Log Final RMS Error')
 ax.set_zlabel('Frequency')
 
 # plt.show()
@@ -854,11 +854,11 @@ ax.set_zlabel('Frequency')
 plt.figure()
 
 x = np.array(N_Edges_g)
-y = np.array(ErrorFinal_g)
+y = np.array(np.log10(ErrorFinal_g))
 
 # Define bin edges
 x_edges = np.linspace(np.min(x), np.max(x), 10)
-y_edges = np.logspace(np.min(np.log10(y)), np.max(np.log(y)), 10)
+y_edges = np.linspace(np.min(y), np.max(y), 10)
 
 # Compute 2D histogram
 hist, x_edges, y_edges = np.histogram2d(x, y, bins=(x_edges, y_edges))
@@ -880,7 +880,7 @@ ax = fig.add_subplot(111, projection='3d')
 ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
 
 ax.set_xlabel('Number of edges')
-ax.set_ylabel('Final RMS Error')
+ax.set_ylabel('Log Final RMS Error')
 ax.set_zlabel('Frequency')
 
 
@@ -889,11 +889,11 @@ ax.set_zlabel('Frequency')
 plt.figure()
 
 x = np.array(C_g)
-y = np.array(ErrorFinal_g)
+y = np.array(np.log10(ErrorFinal_g))
 
 # Define bin edges
 x_edges = np.linspace(np.min(x), np.max(x), 10)
-y_edges = np.linspace(np.min(np.log10(y)), np.max(np.log10(y)), 10)
+y_edges = np.linspace(np.min(y), np.max(y), 10)
 
 # Compute 2D histogram
 hist, x_edges, y_edges = np.histogram2d(x, y, bins=(x_edges, y_edges))
@@ -915,7 +915,7 @@ ax = fig.add_subplot(111, projection='3d')
 ax.bar3d(xpos, ypos, zpos, dx, dy, dz, color='skyblue', edgecolor='black')
 
 ax.set_xlabel('Size of the cycle space |C|')
-ax.set_ylabel('Final RMS Error')
+ax.set_ylabel('Log Final RMS Error')
 ax.set_zlabel('Frequency')
 
 
