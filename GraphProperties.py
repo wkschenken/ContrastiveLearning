@@ -18,6 +18,8 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import pandas as pd
 import networkx as nx
+import seaborn as sns
+
 
 # ---------------------------------------------------------------------------------------------------------------------------
 # Defining a graph by hand --- later, using NetworkX to define graphs more simply and exporting the incidence matrix
@@ -124,7 +126,13 @@ import networkx as nx
 Nr = 10
 Nc = 10
 N_Nodes = Nr*Nc
-p = .2
+
+# Probability of each edge in ER graph
+p = .035
+
+# Degree for each node in a BA graph
+m = 20
+
 
 # G = nx.complete_graph(N_Nodes)
 
@@ -133,8 +141,14 @@ p = .2
 # G = nx.watts_strogatz_graph(N_Nodes, kWS, pWS)
 
 check = 0
+# while check == 0:
+#     G = nx.erdos_renyi_graph(N_Nodes, p)
+#     if np.size(list(nx.connected_components(G))) == 1:
+#         check = 1
+#     print("Generating a connected ER graph...")
+
 while check == 0:
-    G = nx.erdos_renyi_graph(N_Nodes, p)
+    G = nx.barabasi_albert_graph(N_Nodes, 3)
     if np.size(list(nx.connected_components(G))) == 1:
         check = 1
     print("Generating a connected ER graph...")
@@ -645,8 +659,23 @@ plt.figure()
 plt.plot(FVS_Val)
 plt.xlabel("Iteration")
 plt.ylabel("FVS Size")
-plt.show()
+# plt.show()
 
+
+plt.figure()
+
+
+# Plotting a basic histogram
+sns.histplot(FVS_Val, bins=10,  kde=False, color='skyblue', edgecolor='black')
+
+# Adding labels and title
+plt.xlabel('FVS Size')
+plt.ylabel('Frequency')
+plt.title('Histogram of found |FVS|')
+print("Minimum FVS found: {}".format(np.min(FVS_Val)))
+
+# Display the plot
+plt.show()
 
 
 # TODO: save the minimal FVS for this graph; compare the learning rate for graphs of different |FVS|, but similar size, connectivity
