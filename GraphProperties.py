@@ -665,14 +665,14 @@ plt.ylabel("FVS Size")
 plt.figure()
 
 
-# Plotting a basic histogram
+# Plotting a histogram
 sns.histplot(FVS_Val, bins=10,  kde=False, color='skyblue', edgecolor='black')
 
 # Adding labels and title
 plt.xlabel('FVS Size')
 plt.ylabel('Frequency')
 plt.title('Histogram of found |FVS|')
-print("Minimum FVS found: {}".format(np.min(FVS_Val)))
+print("Minimum FVS found {}, occuring {} out of {} trials.".format(np.min(FVS_Val), np.sum(FVS_Val==np.min(FVS_Val)), np.size(FVS_Val)))
 
 # Display the plot
 plt.show()
