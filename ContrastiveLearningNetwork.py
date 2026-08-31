@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.pyplot import imshow
 import random
@@ -130,7 +131,7 @@ plt.title("Initial Hessian Matrix")
 
 # This defines the "free network", to be used to calculate the voltage applied to the clamped network
 
-epsilon = 1e-2 # learning rate for the energy gradient descent
+epsilon = 1e-2 # learning rate for the energy gradient descent (unused now that equilibria are solved directly via solve_equilibrium; kept for reference)
 eta = 0.1 # nudge parameter - nudges the clamped state output voltage from that of the free state towards the desired output
 alpha = 0.1 # learning rate for the edge update rule
 
@@ -143,7 +144,7 @@ V2 = 10
 VgInd = 0
 V1Ind = np.int64(Nr/2)*Nc
 V2Ind = (Nr-1)*Nc
-InputIndices = [Vg, V1Ind, V2Ind]
+InputIndices = [VgInd, V1Ind, V2Ind]
 Inputs = [Vg, V1, V2]
 
 # Desired outputs
@@ -158,7 +159,7 @@ VO3Ind = Nc - 1
 OutputIndices = [VO1Ind, VO2Ind, VO3Ind]
 Outputs = [VO1, VO2, VO3]
 
-RelaxationIterations = 10**4 # how many iterations in gradient descent to minimize the energy of the network for a new input voltage and new weights
+RelaxationIterations = 10**4 # (unused now that equilibria are solved directly via solve_equilibrium; kept for reference -- was the iteration count for the old gradient-descent relaxation)
 LearningIterations = 100 # iterations in the contrastive learning scheme; how many times to update the edges
 
 
@@ -291,14 +292,36 @@ LearningIterations = 100 # iterations in the contrastive learning scheme; how ma
 
 # In the for loop, we must add the change in weights after calculating the equilibrium voltages of all nodes in each network
 
+def solve_equilibrium(Hessian, fixed_idx, fixed_vals, N_Nodes):
+    """
+    Direct linear solve for the node-voltage equilibrium, replacing the RelaxationIterations-step
+    gradient descent previously used here. Physically: the free-state and clamped-state voltages are each
+    just "solve Kirchhoff's current law with a subset of nodes held at fixed_vals" -- equivalent to
+    minimizing V^T Hessian V / 2 subject to V[fixed_idx] = fixed_vals. Partitioning into free/fixed
+    indices and solving H_ff @ V_free = -H_fc @ V_fixed gives the exact equilibrium in one linear solve,
+    with no epsilon or iteration-count tuning needed, and no risk of not-yet-converged voltages leaking
+    into the weight update.
+    """
+    fixed_idx = np.asarray(fixed_idx, dtype=int)
+    fixed_vals = np.asarray(fixed_vals, dtype=float)
+    free_idx = np.setdiff1d(np.arange(N_Nodes), fixed_idx)
+    H_ff = Hessian[np.ix_(free_idx, free_idx)]
+    H_fc = Hessian[np.ix_(free_idx, fixed_idx)]
+    V = np.zeros(N_Nodes)
+    V[fixed_idx] = fixed_vals
+    V[free_idx] = np.linalg.solve(H_ff, -H_fc @ fixed_vals)
+    return V
+
+
 # Define node input and output voltages
 NodeValsFree = np.zeros(N_Nodes) # array to hold node voltages in the free state
 NodeValsFreeInit = np.zeros(N_Nodes) # array to hold node voltages in the free state at the starting point
 NodeValsClamped = np.zeros(N_Nodes) # array to hold node voltages in the clamped state
 
-for vii in InputIndices:
-    NodeValsFree[vii] = Inputs[list(InputIndices).index(vii)]
-    NodeValsClamped[vii] = Inputs[list(InputIndices).index(vii)]
+# NOTE: the previous version pre-loaded InputIndices' values into NodeValsFree/NodeValsClamped here, since
+# gradient descent needs a starting point to iterate from. solve_equilibrium computes each state from
+# scratch on every call regardless of these arrays' prior contents, so that pre-loading step is removed
+# as dead code rather than kept around doing nothing.
 
 # Follow the error in the learning process
 err_RMS = np.zeros(LearningIterations)
@@ -315,19 +338,26 @@ wVecInit = wVec
 # *** change this to a "while error>threshold" statement ***
 dw_RMS = np.zeros(LearningIterations)
 
+# History of edge weights and free-state node voltages across training, for animate_network() below.
+# Index 0 = before any learning (the initial random weights); index m+1 = state after learning
+# iteration m. This is purely additive record-keeping -- it does not change the learning algorithm above,
+# only remembers a snapshot of it at each step so the movie can be built afterward.
+wVec_history = np.zeros((LearningIterations + 1, N_edges))
+NodeValsFree_history = np.zeros((LearningIterations + 1, N_Nodes))
+
 # First calculate the equilibrium of the free state
 for m in range(LearningIterations):
     print(m/LearningIterations)
-    for ii in range(1, RelaxationIterations):
-        # update voltages
-        NodeValsFree = NodeValsFree - epsilon*np.matmul(Hessian, NodeValsFree)
-        # reset inputs
-        for vii in InputIndices:
-            NodeValsFree[vii] = Inputs[list(InputIndices).index(vii)]
+
+    if m == 0:
+        wVec_history[0] = wVec.copy()  # weights before any learning updates
+
+    NodeValsFree = solve_equilibrium(Hessian, InputIndices, Inputs, N_Nodes)
 
     # Note the initial equilibrium voltages
     if m==0:
         NodeValsFreeInit = NodeValsFree
+        NodeValsFree_history[0] = NodeValsFree.copy()  # equilibrium output before any weight updates
 
     # Note the energy of the free state at the end of the relaxation
     e_Free[m] = np.matmul(np.transpose(NodeValsFree), np.matmul(Hessian, NodeValsFree))/2
@@ -336,14 +366,9 @@ for m in range(LearningIterations):
     for voi in OutputIndices:
         NodeValsClamped[voi] = eta*Outputs[list(OutputIndices).index(voi)] + (1-eta)*NodeValsFree[voi]
 
-    for ii in range(1, RelaxationIterations):
-        # update voltages
-        NodeValsClamped = NodeValsClamped - epsilon*np.matmul(Hessian, NodeValsClamped)
-        # reset clamped voltages
-        for vii in InputIndices:
-            NodeValsClamped[vii] = Inputs[list(InputIndices).index(vii)]
-        for voi in OutputIndices:
-            NodeValsClamped[voi] = eta*Outputs[list(OutputIndices).index(voi)] + (1-eta)*NodeValsFree[voi]
+    clamped_idx = list(InputIndices) + list(OutputIndices)
+    clamped_vals = list(Inputs) + [NodeValsClamped[voi] for voi in OutputIndices]
+    NodeValsClamped = solve_equilibrium(Hessian, clamped_idx, clamped_vals, N_Nodes)
 
     # Note the energy of the free state at the end of the relaxation
     e_Clamped[m] = np.matmul(np.transpose(NodeValsClamped), np.matmul(Hessian, NodeValsClamped))/2
@@ -359,10 +384,14 @@ for m in range(LearningIterations):
     Hessian = np.matmul(np.transpose(Delta), np.matmul(w, Delta))
 
     # note the RMS error between the output nodes and the desired outputs
-    err_RMS[m] = (1/2)*np.sqrt((NodeValsFree[VO1Ind] - VO1)**2 + (NodeValsFree[VO2Ind] - VO2)**2)
+    err_RMS[m] = np.sqrt(((NodeValsFree[VO1Ind] - VO1)**2 + (NodeValsFree[VO2Ind] - VO2)**2 + (NodeValsFree[VO3Ind] - VO3)**2) / 3)
 
     # note the RMS change in conductances at this step
     dw_RMS[m] = (alpha/eta)*np.sqrt(np.dot((dV2C - dV2F), (dV2C - dV2F)))/(2*N_edges)
+
+    # record this iteration's resulting weights and free-state voltages for the movie
+    wVec_history[m+1] = wVec.copy()
+    NodeValsFree_history[m+1] = NodeValsFree.copy()
 
 
 # Compare initial Hessian to the final Hessian matrix
@@ -459,6 +488,89 @@ for ii in range(N_Nodes):
         plt.scatter(NodePos[ii, 0], NodePos[ii, 1], 100*Outputs[list(OutputIndices).index(ii)], c = 'r', alpha = 0.2)
 plt.suptitle("Graph with markersize $\propto$ node voltages after optimization")
 plt.title("Blue = Inputs, Red = Outputs")
+
+
+# -------------------------------------------------------------------------------------------------------------------------------------#
+# Animate the network's edges (weights) and node voltages (outputs) evolving over the course of training, from the
+# initial (untrained) state to the final (trained) state -- effectively a movie version of the two static
+# "before"/"after" plots above, filled in with every learning iteration in between.
+# -------------------------------------------------------------------------------------------------------------------------------------#
+
+def animate_network(wVec_history, NodeValsFree_history, Delta, NodePos, InputIndices, Inputs,
+                     OutputIndices, Outputs, err_RMS=None, filename="contrastive_learning_movie.gif", fps=10):
+    """
+    Each frame m shows:
+      - Edges drawn with line thickness proportional to that edge's weight at that point in training
+        (wVec_history[m]).
+      - Nodes drawn with marker size proportional to the MAGNITUDE of their free-state voltage at that
+        point (NodeValsFree_history[m]) -- using magnitude (abs) rather than the raw signed value (as the
+        static plots above do) so this doesn't break if any voltage ever goes negative.
+      - Blue = input nodes, red = output nodes, black = every node's voltage magnitude (matching the
+        color convention of the static "before"/"after" plots above).
+      - If err_RMS is supplied, the current RMS output error is shown in the title, so you can watch the
+        weights reorganize alongside the error actually dropping.
+
+    Edge thickness and node size are normalized using the weight/voltage range across ALL frames (not
+    frame-by-frame), so thickness/size are directly comparable from one frame to the next -- normalizing
+    each frame independently would make an edge look "thicker" at some point purely because the overall
+    weight range at that moment happened to be narrow, not because that edge actually strengthened.
+
+    Saves an animated GIF by default (via Pillow, bundled with matplotlib -- no extra dependencies). Pass
+    a filename ending in .mp4 to use the ffmpeg writer instead (smaller/higher-quality, but requires
+    ffmpeg to be installed separately).
+    """
+    n_frames = wVec_history.shape[0]
+
+    w_min, w_max = wVec_history.min(), wVec_history.max()
+    w_range = (w_max - w_min) if w_max > w_min else 1.0
+    v_absmax = np.max(np.abs(NodeValsFree_history))
+    v_absmax = v_absmax if v_absmax > 0 else 1.0
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    def draw_frame(m):
+        ax.clear()
+        wVec_m = wVec_history[m]
+        NodeVals_m = NodeValsFree_history[m]
+
+        for nn in range(Delta.shape[0]):
+            i1 = np.where(Delta[nn, :] == 1)[0]
+            i2 = np.where(Delta[nn, :] == -1)[0]
+            point1 = [NodePos[i1, 0][0], NodePos[i1, 1][0]]
+            point2 = [NodePos[i2, 0][0], NodePos[i2, 1][0]]
+            x_values = [point1[0], point2[0]]
+            y_values = [point1[1], point2[1]]
+            linewidth = 0.5 + 4.0 * (wVec_m[nn] - w_min) / w_range
+            ax.plot(x_values, y_values, 'k', linestyle='-', linewidth=linewidth, zorder=1)
+
+        for ii in range(NodePos.shape[0]):
+            size = 200 * abs(NodeVals_m[ii]) / v_absmax
+            ax.scatter(NodePos[ii, 0], NodePos[ii, 1], s=max(size, 5), c='k', alpha=0.5, zorder=2)
+            if ii in InputIndices:
+                ax.scatter(NodePos[ii, 0], NodePos[ii, 1], s=20, c='b', zorder=3)
+            if ii in OutputIndices:
+                ax.scatter(NodePos[ii, 0], NodePos[ii, 1], s=20, c='r', zorder=3)
+
+        title = f"Learning iteration {m}/{n_frames - 1}"
+        if err_RMS is not None and 0 < m <= len(err_RMS):
+            title += f"  |  RMS error = {err_RMS[m - 1]:.3f}"
+        ax.set_title(title)
+        ax.set_xlabel("Blue = Inputs, Red = Outputs, Black = node voltage magnitude", fontsize=8)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    anim = animation.FuncAnimation(fig, draw_frame, frames=n_frames, interval=1000 / fps, repeat=True)
+
+    writer = animation.FFMpegWriter(fps=fps) if filename.endswith(".mp4") else animation.PillowWriter(fps=fps)
+    anim.save(filename, writer=writer)
+    print(f"Saved animation to {filename}")
+    plt.close(fig)
+    return anim
+
+
+animate_network(wVec_history, NodeValsFree_history, Delta, NodePos, InputIndices, Inputs,
+                 OutputIndices, Outputs, err_RMS=err_RMS)
+
 
 print(NodeValsFreeInit)
 print(NodeValsFree)
