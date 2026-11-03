@@ -1,4 +1,4 @@
-"""
+""" This code was generated with Claude. 
 GRAPH GROWTH VS. LEARNING PERFORMANCE (distant input/output placement, multiple graph families)
 ===============================================================================================================================
 Generalization of the earlier BA-only version: set GRAPH_TYPE (below) to choose which random-graph family to test.
