@@ -1,4 +1,4 @@
-"""
+""" This code was generated with Claude. 
 MULTI-PAIR CAPACITY VS. GRAPH SIZE
 ===============================================================================================================================
 Extends the single-input-output-pair experiments (Graph_Growth_vs_Learning.py) to K independent input/output
